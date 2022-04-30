@@ -1,0 +1,10 @@
+.idea/
+_squeaker.py
+_l1nker.py
+burp-parameter-names.txt
+common.txt
+geckodriver.log
+subdomains-top1million-20000.txt
+subdomains-top1million-110000.txt
+test.py
+wfuzz_options
