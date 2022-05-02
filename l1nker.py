@@ -1,22 +1,24 @@
 #!/usr/bin/python3
 USAGE = '''Example:
-l1nker.py -u https://www.flat.io
-l1nker.py -u https://www.flat.io -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27
-todo://l1nker.py -u https://www.flat.io -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27 -d
-l1nker.py -u https://flat.io -o result.txt
-l1nker.py -u https://flat.io -oos blog.flat.io,peoc.flat.io,translator.flat.io
-l1nker.py -u https://flat.io --headers User-Agent: ______\nReferer: ______ --cookies Session: _______
+l1nker.py -u https://target.com
+l1nker.py -u https://target.com -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27
+todo://l1nker.py -u https://target.com -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27 -d
+l1nker.py -u https://target.com -o result.txt
+l1nker.py -u https://target.com -ins api.target.com,target.com
+l1nker.py -u https://target.com -oos blog.target.com,peoc.target.com,translator.target.com
+l1nker.py -u https://target.com --headers User-Agent: ______\nReferer: ______ --cookies Session: _______
 
 #1. Get hh, hc for subdomain fuzzing...
 l1nker -u <url> -s
 #2. Go
-l1nker -u <url> -s -d --hh <hh> --hc <hc>
+l1nker -u <url> -s --hh <hh> --hc <hc>
 '''
 import requests, re, argparse, time, os, sys, platform, logging, wfuzz, subprocess, signal
 from bs4 import BeautifulSoup
 from threading import Thread
 
 
+GET, POST, SCRIPT, TRAP, TRASH, EPT = 'GET', 'POST', 'SCRIPT', 'TRAP', 'TRASH', 'EPT'
 def parser():
     parser = argparse.ArgumentParser(prog='L1nker', conflict_handler='resolve')
     parser.add_argument('-u', '--url', required=True, type=str, help='REQUEST URL')
@@ -28,7 +30,8 @@ def parser():
     parser.add_argument('--hh', type=str, default='', help='Hide responses with the specified chars')
     parser.add_argument('--hc', type=str, default='', help='Hide responses with the specified code')
     parser.add_argument('--rleve', type=int, default=0, help='Recursive path discovery being depth the maximum recursion level (0 default)')
-    parser.add_argument('-oos', '--out-of-scope', type=str, default='', help='DOMAIN WITH NO MONEY (e.g. blog.flat.io,x.flat.io')
+    parser.add_argument('-oos', '--out-of-scope', type=str, default='', help='DOMAIN WITH NO MONEY (e.g. blog.target.com,x.target.com')
+    parser.add_argument('-ins', '--in-scope', type=str, default='', help='DOMAIN ONLY WITH MONEY')
     parser.add_argument('-v', '--verbose', action='store_true', help='VERBOSE')
     parser.add_argument('--timeout', default=1, type=int, help='TIMEOUT')
     parser.add_argument('-t', '--threads', default=1, type=int, help='THREADS')
@@ -37,15 +40,6 @@ def parser():
     parser.add_argument('-h', '--help', action='store_true', help='PRINT THIS')
     return parser
 
-USAGE = '''
-#1. Recursively Crawl a specified URL
-l1nker -u <URL>
-#2. Fuzz all subdomains
-l1nker -u <URL> -s
-#3. Fuzz all directories and Crawl
-l1nker -u <URL> -s -d'''
-
-GET, POST, SCRIPT, TRAP, TRASH, EPT = 'GET', 'POST', 'SCRIPT', 'TRAP', 'TRASH', 'EPT'
 class L1nker:
     '''
     save url(s) in scope, then enumerate request
@@ -167,9 +161,14 @@ class L1nker:
                     self.scope[domain].append(lin_)
                     lst.append((typE, link))
             else:
-                if domain not in oos: # out of scope
-                    self.scope[domain] = [lin_]
-                    lst.append((typE, link))
+                if ins:
+                    if domain in ins:
+                        self.scope[domain] = [lin_]
+                        lst.append((typE, link))
+                else:
+                    if domain not in oos: # out of scope
+                        self.scope[domain] = [lin_]
+                        lst.append((typE, link))
         return lst
 
     def get_resp(self, url):
@@ -255,16 +254,17 @@ if args.help or not args.url:
 debug = args.debug
 timeout = args.timeout
 output_file = args.output
-oos = args.out_of_scope.replace(' ', '').split(',')
-print(f"[!] Out of Scope: {', '.join(oos)}")
+oos = args.out_of_scope.replace(' ', '').split(',') if oos else []
+ins = args.in_scope.replace(' ', '').split(',') if ins else []
+if oos:
+    print(f"[!] Out of Scope: {', '.join(oos)}")
+if ins:
+    print(f"[!] In Scope: {', '.join(ins)}")
 threads = args.threads
 proxy_ip   = re.match(r'https?:\/\/(?P<ip>[0-9.]*):', args.proxy).group('ip')
 proxy_port = re.match(r'https?:\/\/[a-zA-Z0-9-.]*:(?P<port>\d+)\/?', args.proxy).group('port')
 proxy_type = 'HTTP'
-proxy = {
-    'http':  args.proxy,
-    'https': args.proxy
-}
+proxy = {'http': args.proxy, 'https': args.proxy}
 hh = [int(i) for i in args.hh.replace(' ', '').split(',')] if args.hh else []
 hc = [int(i) for i in args.hc.replace(' ', '').split(',')] if args.hc else []
 rleve = args.rleve
