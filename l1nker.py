@@ -76,7 +76,8 @@ class L1nker:
                     self.scope[r.history.urlp.netloc] = []
         except KeyboardInterrupt:
             print("[!] Keyboard Interrupt")
-            sys.exit(0)
+        except wfuzz.exception.FuzzExceptNetError:
+            pass
 
     def directory_fuzz(self):
         '''
@@ -92,7 +93,8 @@ class L1nker:
                     self.scope[domain].append(r.history.url)
         except KeyboardInterrupt:
             print("[!] Keyboard Interrupt")
-            sys.exit(0)
+        except wfuzz.exception.FuzzExceptNetError:
+            pass
 
     def extract_link_from_html(self, html):
         if debug: print("[!] Extract Link From HTML")
@@ -167,7 +169,6 @@ class L1nker:
             return requests.get(url, headers=self.headers, cookies=self.cookies, proxies=proxy)
         except KeyboardInterrupt:
             print(f"[!] Current at {url}")
-            sys.exit(0)
         except Exception as e:
             print(f"[!] {e}: {url}")
 
@@ -242,9 +243,8 @@ if args.help or not args.url:
 debug = args.debug
 timeout = args.timeout
 output_file = args.output
-oos = (i for i in args.out_of_scope.split(','))
-for i in oos:
-    if i: print(f"[!] Out of Scope: {i}")
+oos = args.out_of_scope.replace(' ', '').split(',')
+print(f"[!] Out of Scope: {', '.join(oos)}")
 threads = args.threads
 proxy_ip   = re.match(r'https?:\/\/(?P<ip>[0-9.]*):', args.proxy).group('ip')
 proxy_port = re.match(r'https?:\/\/[a-zA-Z0-9-.]*:(?P<port>\d+)\/?', args.proxy).group('port')
@@ -258,8 +258,4 @@ hc = [int(i) for i in args.hc.replace(' ', '').split(',')] if args.hc else []
 rleve = args.rleve
 
 subdomain_fuzz, directory_fuzz = args.subdomain, args.directory
-l1nker = L1nker(args.url, headers=args.headers, cookies=args.cookies)
-try:
-    l1nker.start()
-except KeyboardInterrupt:
-    sys.exit(0)
+L1nker(args.url, headers=args.headers, cookies=args.cookies).start()
