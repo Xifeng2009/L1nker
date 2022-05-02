@@ -1,10 +1,16 @@
 #!/usr/bin/python3
-'''
+USAGE = '''Example:
 l1nker.py -u https://www.flat.io
 l1nker.py -u https://www.flat.io -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27
-l1nker.py -u https://www.flat.io -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27 -d
+todo://l1nker.py -u https://www.flat.io -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27 -d
 l1nker.py -u https://flat.io -o result.txt
 l1nker.py -u https://flat.io -oos blog.flat.io,peoc.flat.io,translator.flat.io
+l1nker.py -u https://flat.io --headers User-Agent: ______\nReferer: ______ --cookies Session: _______
+
+#1. Get hh, hc for subdomain fuzzing...
+l1nker -u <url> -s
+#2. Go
+l1nker -u <url> -s -d --hh <hh> --hc <hc>
 '''
 import requests, re, argparse, time, os, sys, platform, logging, wfuzz, subprocess, signal
 from bs4 import BeautifulSoup
@@ -90,11 +96,12 @@ class L1nker:
             for domain in self.scope.keys():
                 url = f"{self.protocol}://{domain}/FUZZ"
                 for r in wfuzz.fuzz(url=url, hc=hc, hh=hh, rleve=rleve, payloads=[("file", dict(fn=fn))], proxies=[(proxy_ip, proxy_port, proxy_type)]):
-                    print(f"[+] {r.history.code} {len(r.history.content)} {r.history.url}")
+                    length = len(r.history.content)
+                    print(f"[+] {r.history.code} {length} {r.history.url}")
                     self.scope[domain].append(r.history.url)
         except KeyboardInterrupt:
             print("[!] Keyboard Interrupt")
-            sys.exit(0)
+            exit(0)
         except wfuzz.exception.FuzzExceptNetError:
             pass
 
