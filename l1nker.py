@@ -13,7 +13,7 @@ l1nker -u <url> -s
 #2. Go
 l1nker -u <url> -s --hh <hh> --hc <hc>
 '''
-import requests, re, argparse, time, os, sys, platform, logging, wfuzz, subprocess, signal
+import requests, re, argparse, time, os, sys, platform, logging, wfuzz, subprocess, json
 from bs4 import BeautifulSoup
 from threading import Thread
 
@@ -52,6 +52,7 @@ class L1nker:
         self.headers = {i.split(': ')[0]: i.split(': ')[1] for i in headers.split('\n')} if headers else {}
         self.cookies = {i.split('=')[0]: i.split('=')[1] for i in cookies.split('; ')} if cookies else {}
         self.scope = {self.domain: [self.base_url]}
+        self.path = os.path.join(os.getcwd(), os.path.dirname(__file__), 'data', self.root_domain)
         # self.threads = []
 
     def _get_domain(self, url):
@@ -61,10 +62,20 @@ class L1nker:
         with open(file, 'a') as f:
             f.write(data)
 
+    def _read_scope(self):
+        fp = os.path.join(self.path, 'scope.json')
+        if os.path.exists(fp):
+            if input("[!] Read Scope From Json? (y/N) ").upper() == 'Y':
+                fp = open(fp, 'r')
+                self.scope.update(json.load(fp))
+
+    def _record_scope(self):
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
+        fp = open(os.path.join(self.path, 'scope.json'), 'w')
+        data = json.dump(self.scope, fp)
+
     def subdomain_fuzz(self):
-        '''
-        wfuzz -u http://FUZZ.target.com -w <dict> --hc 404
-        '''
         print("[!] Subdomain Fuzzing")
         fn = r"C:\Users\WhoAmI\Desktop\Project_Z\L1nker\subdomains-top1million-5000.txt"
         url = f"{self.protocol}://FUZZ.{self.root_domain}"
@@ -121,6 +132,8 @@ class L1nker:
         if debug: print("[!] Filter: Clean Links")
         for typE, link in links:
             if re.match(r'.*\.(json|7z|a|apk|ar|bz2|cab|cpio|deb|dmg|egg|gz|iso|jar|lha|mar|pea|rar|rpm|s7z|shar|tar|tbz2|tgz|tlz|war|whl|xpi|zip|zipx|xz|pak|aac|aiff|ape|au|flac|gsm|it|m3u|m4a|mid|mod|mp3|mpa|pls|ra|s3m|sid|wav|wma|xm|3dm|3ds|max|bmp|dds|gif|jpg|jpeg|png|psd|xcf|tga|thm|tif|tiff|yuv|ai|eps|ps|svg|dwg|dxf|gpx|kml|kmz|webp|3g2|3gp|aaf|asf|avchd|avi|drc|flv|m2v|m4p|m4v|mkv|mng|mov|mp2|mp4|mpe|mpeg|mpg|mpv|mxf|nsv|ogg|ogv|ogm|qt|rm|rmvb|roq|srt|svi|vob|webm|wmv|yuv|css)$', link):
+                continue
+            if re.search(r'\s', link):
                 continue
             if re.match(r'\/\/', link): # //target.com/....
                 yield typE, f"{self.protocol}:{link}"
@@ -235,13 +248,16 @@ class L1nker:
     def start(self):
         if debug:
             print("[!] Debug Mode is On")
-        if subdomain_fuzz:
-            self.subdomain_fuzz()
-        if directory_fuzz:
-            self.directory_fuzz()
+        # if subdomain_fuzz:
+        #     self.subdomain_fuzz()
+        # if directory_fuzz:
+        #     self.directory_fuzz()
+        self._read_scope()
         print("[!] Start Crawling")
         self.crawl()
-        if input('[!] Clear Screan? (Y/n)').upper() != 'N':
+        print("[!] Recording Scope")
+        self._record_scope()
+        if input('[!] Clear Screan? (Y/n) ').upper() != 'N':
             os.system('powershell Clear-Host') if platform.system() == 'Windows' else os.system('cls')
 
 ap = parser()
@@ -254,16 +270,16 @@ if args.help or not args.url:
 debug = args.debug
 timeout = args.timeout
 output_file = args.output
-oos = args.out_of_scope.replace(' ', '').split(',') if oos else []
-ins = args.in_scope.replace(' ', '').split(',') if ins else []
+oos = args.out_of_scope.replace(' ', '').split(',') if args.out_of_scope else []
+ins = args.in_scope.replace(' ', '').split(',') if args.in_scope else []
 if oos:
     print(f"[!] Out of Scope: {', '.join(oos)}")
 if ins:
     print(f"[!] In Scope: {', '.join(ins)}")
 threads = args.threads # todo://how recursive live together with threading
 rleve = args.rleve
-proxy_ip   = re.match(r'https?:\/\/(?P<ip>[0-9.]*):', args.proxy).group('ip')
-proxy_port = re.match(r'https?:\/\/[a-zA-Z0-9-.]*:(?P<port>\d+)\/?', args.proxy).group('port')
+proxy_ip   = re.match(r'https?:\/\/(?P<ip>[0-9.]*):', args.proxy).group('ip') if args.proxy else ''
+proxy_port = re.match(r'https?:\/\/[a-zA-Z0-9-.]*:(?P<port>\d+)\/?', args.proxy).group('port') if args.proxy else ''
 proxy_type = 'HTTP'
 proxy = {'http': args.proxy, 'https': args.proxy}
 hh = [int(i) for i in args.hh.replace(' ', '').split(',')] if args.hh else []
