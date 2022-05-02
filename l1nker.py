@@ -76,6 +76,7 @@ class L1nker:
                     self.scope[r.history.urlp.netloc] = []
         except KeyboardInterrupt:
             print("[!] Keyboard Interrupt")
+            sys.exit(0)
         except wfuzz.exception.FuzzExceptNetError:
             pass
 
@@ -89,10 +90,11 @@ class L1nker:
             for domain in self.scope.keys():
                 url = f"{self.protocol}://{domain}/FUZZ"
                 for r in wfuzz.fuzz(url=url, hc=hc, hh=hh, rleve=rleve, payloads=[("file", dict(fn=fn))], proxies=[(proxy_ip, proxy_port, proxy_type)]):
-                    print(f"[+] {r.history.url}")
+                    print(f"[+] {r.history.code} {len(r.history.content)} {r.history.url}")
                     self.scope[domain].append(r.history.url)
         except KeyboardInterrupt:
             print("[!] Keyboard Interrupt")
+            sys.exit(0)
         except wfuzz.exception.FuzzExceptNetError:
             pass
 
@@ -169,6 +171,7 @@ class L1nker:
             return requests.get(url, headers=self.headers, cookies=self.cookies, proxies=proxy)
         except KeyboardInterrupt:
             print(f"[!] Current at {url}")
+            sys.exit(0)
         except Exception as e:
             print(f"[!] {e}: {url}")
 
@@ -192,6 +195,8 @@ class L1nker:
         time.sleep(timeout)
         url = url if url else self.base_url
         r = self.get_resp(url)
+        if not r:
+            return
         status_code, text = r.status_code, r.text
         domain = self._get_domain(url)
         links = self.extract_link_from_html(text)
