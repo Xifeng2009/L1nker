@@ -3,10 +3,10 @@
 l1nker.py -u https://www.flat.io
 l1nker.py -u https://www.flat.io -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27
 l1nker.py -u https://www.flat.io -p 'http://127.0.0.1:10809' -s --hc 302,404 --hh 27 -d
+l1nker.py -u https://flat.io -o result.txt
+l1nker.py -u https://flat.io -oos blog.flat.io,peoc.flat.io,translator.flat.io
 '''
-import subprocess
-
-import requests, re, argparse, time, os, sys, platform, logging, wfuzz
+import requests, re, argparse, time, os, sys, platform, logging, wfuzz, subprocess, signal
 from bs4 import BeautifulSoup
 from threading import Thread
 
@@ -19,8 +19,8 @@ def parser():
     parser.add_argument('--headers', type=str, default='', help='REQUEST HEADER (e.g. User-Agent: _______\nReferer: ________')
     parser.add_argument('--cookies', type=str, default='', help='REQUEST COOKIE')
     parser.add_argument('-p', '--proxy', type=str, help='PROXY SERVER (e.g. http://127.0.0.1:8080')
-    parser.add_argument('--hh', type=str, help='Hide responses with the specified chars')
-    parser.add_argument('--hc', type=str, help='Hide responses with the specified code')
+    parser.add_argument('--hh', type=str, default='', help='Hide responses with the specified chars')
+    parser.add_argument('--hc', type=str, default='', help='Hide responses with the specified code')
     parser.add_argument('--rleve', type=int, default=0, help='Recursive path discovery being depth the maximum recursion level (0 default)')
     parser.add_argument('-oos', '--out-of-scope', type=str, default='', help='DOMAIN WITH NO MONEY (e.g. blog.flat.io,x.flat.io')
     parser.add_argument('-v', '--verbose', action='store_true', help='VERBOSE')
@@ -69,10 +69,14 @@ class L1nker:
         fn = r"C:\Users\WhoAmI\Desktop\Project_Z\L1nker\subdomains-top1million-5000.txt"
         url = f"{self.protocol}://FUZZ.{self.root_domain}"
         # todo://progress bar
-        for r in wfuzz.fuzz(url=url, hc=hc, hh=hh, payloads=[("file", dict(fn=fn))], proxies=[(proxy_ip, proxy_port, proxy_type)]):
-            print(f"[+] {r.history.code} {len(r.history.content)} {r.history.urlp.netloc}")
-            if not self.scope.get(r.history.urlp.netloc):
-                self.scope[r.history.urlp.netloc] = []
+        try:
+            for r in wfuzz.fuzz(url=url, hc=hc, hh=hh, payloads=[("file", dict(fn=fn))], proxies=[(proxy_ip, proxy_port, proxy_type)]):
+                if (not self.scope.get(r.history.urlp.netloc)) and (r.history.urlp.netloc not in oos):
+                    print(f"[+] {r.history.code} {len(r.history.content)} {r.history.urlp.netloc}")
+                    self.scope[r.history.urlp.netloc] = []
+        except KeyboardInterrupt:
+            print("[!] Keyboard Interrupt")
+            sys.exit(0)
 
     def directory_fuzz(self):
         '''
@@ -80,12 +84,15 @@ class L1nker:
         '''
         print("[!] Directory Fuzzing")
         fn = r"C:\Users\WhoAmI\Desktop\Project_Z\L1nker\dirbuster-directory-list-2.3-medium.txt"
-        for domain in self.scope.keys():
-            url = f"{self.protocol}://{domain}/FUZZ"
-            for r in wfuzz.fuzz(url=url, hc=hc, hh=hh, rleve=rleve, payloads=[("file", dict(fn=fn))],
-                                proxies=[(proxy_ip, proxy_port, proxy_type)]):
-                print(f"[+] {r.history.url}")
-                self.scope[domain].append(r.history.url)
+        try:
+            for domain in self.scope.keys():
+                url = f"{self.protocol}://{domain}/FUZZ"
+                for r in wfuzz.fuzz(url=url, hc=hc, hh=hh, rleve=rleve, payloads=[("file", dict(fn=fn))], proxies=[(proxy_ip, proxy_port, proxy_type)]):
+                    print(f"[+] {r.history.url}")
+                    self.scope[domain].append(r.history.url)
+        except KeyboardInterrupt:
+            print("[!] Keyboard Interrupt")
+            sys.exit(0)
 
     def extract_link_from_html(self, html):
         if debug: print("[!] Extract Link From HTML")
@@ -246,7 +253,8 @@ proxy = {
     'http':  args.proxy,
     'https': args.proxy
 }
-hh, hc = args.hh.replace(' ', '').split(','), args.hc.replace(' ', '').split(',')
+hh = [int(i) for i in args.hh.replace(' ', '').split(',')] if args.hh else []
+hc = [int(i) for i in args.hc.replace(' ', '').split(',')] if args.hc else []
 rleve = args.rleve
 
 subdomain_fuzz, directory_fuzz = args.subdomain, args.directory
