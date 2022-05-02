@@ -260,14 +260,14 @@ if oos:
     print(f"[!] Out of Scope: {', '.join(oos)}")
 if ins:
     print(f"[!] In Scope: {', '.join(ins)}")
-threads = args.threads
+threads = args.threads # todo://how recursive live together with threading
+rleve = args.rleve
 proxy_ip   = re.match(r'https?:\/\/(?P<ip>[0-9.]*):', args.proxy).group('ip')
 proxy_port = re.match(r'https?:\/\/[a-zA-Z0-9-.]*:(?P<port>\d+)\/?', args.proxy).group('port')
 proxy_type = 'HTTP'
 proxy = {'http': args.proxy, 'https': args.proxy}
 hh = [int(i) for i in args.hh.replace(' ', '').split(',')] if args.hh else []
 hc = [int(i) for i in args.hc.replace(' ', '').split(',')] if args.hc else []
-rleve = args.rleve
 
 subdomain_fuzz, directory_fuzz = args.subdomain, args.directory
 L1nker(args.url, headers=args.headers, cookies=args.cookies).start()
