@@ -210,8 +210,44 @@ class L1nker:
             lst.append(line)
         return lst
 
+    @staticmethod
+    def find_domain_by_google_dork(keyword):
+        if ins:
+            return
+        site = "https://www.google.com"
+        api  = f"https://www.google.com/search?q=site:{keyword}&start={{}}&num=100"
+        try:
+            print("[!] Getting Google Session")
+            s = requests.Session()
+            s.headers.update(fake_headers)
+            s.proxies.update(proxy)
+            s.get(site)
+        except Exception as e:
+            print(f"[!] Getting Session Error: {e}")
+            sys.exit(0)
+        for i in range(0, 1001, 100):
+            url = api.format(i)
+            try:
+                html = s.get(url).text
+                soup = BeautifulSoup(html, 'lxml')
+                for item in soup.find_all('div', class_='yuRUbf'):
+                    for i in item.find_all('a'):
+                        href = i.get('href')
+                        subdomain = re.match(r'https?:\/\/(?P<subdomain>[a-zA-Z0-9-.]+)\.flat.io', href).group('subdomain')
+                        if subdomain and (not self.scope.get(subdomain)):
+                            if subdomain in oos:
+                                continue
+                            print(f"[+] {subdomain}")
+                            self.scope[subdomain] = []
+            except Exception as e:
+                print(f"[!] Crawling Error: {e}")
+            finally:
+                time.sleep(timeout*3)
+        return
+
     def crawl(self, url=None):
         time.sleep(timeout)
+        print("[!] Start Crawling")
         url = url if url else self.base_url
         r = self.get_resp(url)
         if not r:
@@ -246,6 +282,7 @@ class L1nker:
                 print(f"[-] [TRASH] {link}")
 
     def start(self):
+        self.find_domain_by_google_dork(self.domain)
         if debug:
             print("[!] Debug Mode is On")
         # if subdomain_fuzz:
@@ -253,7 +290,6 @@ class L1nker:
         # if directory_fuzz:
         #     self.directory_fuzz()
         self._read_scope()
-        print("[!] Start Crawling")
         self.crawl()
         print("[!] Recording Scope")
         self._record_scope()
@@ -282,6 +318,7 @@ proxy_ip   = re.match(r'https?:\/\/(?P<ip>[0-9.]*):', args.proxy).group('ip') if
 proxy_port = re.match(r'https?:\/\/[a-zA-Z0-9-.]*:(?P<port>\d+)\/?', args.proxy).group('port') if args.proxy else ''
 proxy_type = 'HTTP'
 proxy = {'http': args.proxy, 'https': args.proxy}
+fake_headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.147 Safari/537.36', 'Referer': 'https://google.com.jp'}
 hh = [int(i) for i in args.hh.replace(' ', '').split(',')] if args.hh else []
 hc = [int(i) for i in args.hc.replace(' ', '').split(',')] if args.hc else []
 
