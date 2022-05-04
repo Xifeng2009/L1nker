@@ -1,6 +1,7 @@
 .idea/
 __pycache__/
 data/
+.ideavimrc
 _squeaker.py
 _l1nker.py
 burp-parameter-names.txt

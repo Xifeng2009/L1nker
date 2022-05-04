@@ -233,17 +233,17 @@ class L1nker:
                 for item in soup.find_all('div', class_='yuRUbf'):
                     for i in item.find_all('a'):
                         href = i.get('href')
-                        subdomain = re.match(r'https?:\/\/(?P<subdomain>[a-zA-Z0-9-.]+)\.flat.io', href).group('subdomain')
-                        if subdomain and (not self.scope.get(subdomain)):
-                            if subdomain in oos:
-                                continue
-                            print(f"[+] {subdomain}")
-                            self.scope[subdomain] = []
+                        if re.match(r'https?:\/\/(?P<subdomain>[a-zA-Z0-9-.]+)\.flat.io', href):
+                            subdomain = re.match(r'https?:\/\/(?P<subdomain>[a-zA-Z0-9-.]+)\.flat.io', href).group('subdomain').group('subdomain')
+                            if not self.scope.get(subdomain):
+                                if subdomain in oos:
+                                    continue
+                                print(f"[+] {subdomain}")
+                                self.scope[subdomain] = []
             except Exception as e:
                 print(f"[!] Crawling Error: {e}")
             finally:
                 time.sleep(timeout*3)
-        return
 
     def crawl(self, url=None):
         time.sleep(timeout)
@@ -282,13 +282,13 @@ class L1nker:
                 print(f"[-] [TRASH] {link}")
 
     def start(self):
-        self.find_domain_by_google_dork(self.domain)
         if debug:
             print("[!] Debug Mode is On")
         # if subdomain_fuzz:
         #     self.subdomain_fuzz()
         # if directory_fuzz:
         #     self.directory_fuzz()
+        self.find_domain_by_google_dork(self.domain)
         self._read_scope()
         self.crawl()
         print("[!] Recording Scope")
