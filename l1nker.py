@@ -247,7 +247,6 @@ class L1nker:
 
     def crawl(self, url=None):
         time.sleep(timeout)
-        print("[!] Start Crawling")
         url = url if url else self.base_url
         r = self.get_resp(url)
         if not r:
@@ -290,6 +289,7 @@ class L1nker:
         #     self.directory_fuzz()
         self.find_domain_by_google_dork(self.domain)
         self._read_scope()
+        print("[!] Start Crawling")
         self.crawl()
         print("[!] Recording Scope")
         self._record_scope()
