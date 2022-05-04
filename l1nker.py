@@ -139,7 +139,7 @@ class L1nker:
                 yield typE, f"{self.protocol}:{link}"
             elif re.match(r'\/', link): # /path/....
                 yield typE, f"{self.protocol}://{domain}{link}"
-            elif re.match(r'https?:\/\/([a-zA-Z0-9-]\.)*{}'.format(domain), link): # https://test2.target.com
+            elif re.match(r'https?:[\/\\x2F]{2}([a-zA-Z0-9-]\.)*{}'.format(domain), link): # https://test2.target.com
                 yield typE, link
             elif re.match(r'\w+', link) and not re.match(r'https?:\/\/', link) and not re.match(r'mailto:', link): # page
                 yield typE, f"{url}/{link}"
