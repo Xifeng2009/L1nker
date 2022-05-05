@@ -135,11 +135,11 @@ class L1nker:
                 continue
             if re.search(r'\s', link):
                 continue
-            if re.match(r'\/\/', link): # //target.com/....
+            if re.match(r'\/\/', link):
                 yield typE, f"{self.protocol}:{link}"
-            elif re.match(r'\/', link): # /path/....
+            elif re.match(r'\/', link):
                 yield typE, f"{self.protocol}://{domain}{link}"
-            elif re.match(r'https?:[\/\\x2F]{2}([a-zA-Z0-9-]\.)*{}'.format(domain), link): # https://test2.target.com
+            elif re.match(r'https?:\/\/([a-zA-Z0-9-]+\.)*{}'.format(domain), link):
                 yield typE, link
             elif re.match(r'\w+', link) and not re.match(r'https?:\/\/', link) and not re.match(r'mailto:', link): # page
                 yield typE, f"{url}/{link}"
