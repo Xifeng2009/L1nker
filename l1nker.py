@@ -6,7 +6,7 @@ l1nker.py -u https://target.com -ins api.target.com,target.com
 l1nker.py -u https://target.com -oos blog.target.com,peoc.target.com,translator.target.com
 l1nker.py -u https://target.com --headers 'User-Agent: ______\nReferer: ______' --cookies 'Session: _______'
 '''
-import requests, httpx, re, argparse, time, os, sys, platform, wfuzz, subprocess, json, queue, urllib3
+import requests, re, argparse, time, os, sys, platform, wfuzz, subprocess, json, queue, urllib3
 from bs4 import BeautifulSoup
 from threading import Thread, Lock, Semaphore
 
@@ -28,7 +28,6 @@ def parser():
     parser.add_argument('-h', '--help', action='store_true', help='PRINT THIS')
     return parser
 
-
 class L1nker:
     def __init__(self, url, headers={}, cookies={}):
         self.url = url
@@ -42,7 +41,7 @@ class L1nker:
     @staticmethod
     def print_ok(msg=''):
         for i in range(3):
-            time.sleep(0.1)
+            time.sleep(0.033)
             print('.', end='')
         print("OK" if not msg else msg)
 
@@ -55,11 +54,15 @@ class L1nker:
         print("[*] Analyzing URL", end='')
         self.base_url = url.rstrip('/')
         self.protocol = 'http' if url.startswith('http://') else 'https'
-        self.print_ok()
-
-    def analyze_domain(self):
-        print("[*] Analyzing Domain", end='')
-        self.domain = re.match(r'https?:\/\/([a-zA-Z0-9-]*\.)*(?P<domain>\w*\.\w+)', self.base_url).group('domain')
+        '''
+        www.google.co.uk
+        www.google.com
+        google.com
+        localhost
+        127.0.0.1
+        '''
+        _domain = re.match(r'https?://(?P<domain>[a-z0-9-.]*)/?', self.base_url).group('domain').rstrip('/')
+        self.domain = _domain if _domain.count('.') in [0, 1] else '.'.join(_domain.split('.')[1:])
         self.subdomain = self.get_domain(self.base_url)
         self.print_ok()
 
@@ -139,9 +142,7 @@ class L1nker:
     def filter_clean_links(self, domain, url, links):
         if debug: print("[!] Filter: Clean Links")
         for typE, link in links:
-            if re.match(
-                    r'.*\.(json|7z|a|apk|ar|bz2|cab|cpio|deb|dmg|egg|gz|iso|jar|lha|mar|pea|rar|rpm|s7z|shar|tar|tbz2|tgz|tlz|war|whl|xpi|zip|zipx|xz|pak|aac|aiff|ape|au|flac|gsm|it|m3u|m4a|mid|mod|mp3|mpa|pls|ra|s3m|sid|wav|wma|xm|3dm|3ds|max|bmp|dds|gif|jpg|jpeg|png|psd|xcf|tga|thm|tif|tiff|yuv|ai|eps|ps|svg|dwg|dxf|gpx|kml|kmz|webp|3g2|3gp|aaf|asf|avchd|avi|drc|flv|m2v|m4p|m4v|mkv|mng|mov|mp2|mp4|mpe|mpeg|mpg|mpv|mxf|nsv|ogg|ogv|ogm|qt|rm|rmvb|roq|srt|svi|vob|webm|wmv|yuv|css)$',
-                    link):
+            if re.match(r'.*\.(json|7z|a|apk|ar|bz2|cab|cpio|deb|dmg|egg|gz|iso|jar|lha|mar|pea|rar|rpm|s7z|shar|tar|tbz2|tgz|tlz|war|whl|xpi|zip|zipx|xz|pak|aac|aiff|ape|au|flac|gsm|it|m3u|m4a|mid|mod|mp3|mpa|pls|ra|s3m|sid|wav|wma|xm|3dm|3ds|max|bmp|dds|gif|jpg|jpeg|png|psd|xcf|tga|thm|tif|tiff|yuv|ai|eps|ps|svg|dwg|dxf|gpx|kml|kmz|webp|3g2|3gp|aaf|asf|avchd|avi|drc|flv|m2v|m4p|m4v|mkv|mng|mov|mp2|mp4|mpe|mpeg|mpg|mpv|mxf|nsv|ogg|ogv|ogm|qt|rm|rmvb|roq|srt|svi|vob|webm|wmv|yuv|css)$', link):
                 continue
             if re.search(r'\s', link):
                 continue
@@ -151,13 +152,11 @@ class L1nker:
                 yield typE, f"{self.protocol}://{domain}{link}"
             elif re.match(r'https?:\/\/([a-zA-Z0-9-]+\.)*{}'.format(domain), link):
                 yield typE, link
-            elif re.match(r'\w+', link) and not re.match(r'https?:\/\/', link) and not re.match(r'mailto:',
-                                                                                                link):  # page
+            elif re.match(r'\w+', link) and not re.match(r'https?:\/\/', link) and not re.match(r'mailto:', link):  # page
                 yield typE, f"{url}/{link}"
             elif re.match(r'https?:\/\/.*\/.*\.js', link):
                 yield typE, link
-            if not re.match(r'https?:\/\/[a-zA-Z0-9-.]*{}'.format(self.domain), link) and not re.match(r'.*\.js$',
-                                                                                                            link):  # ilegal domain
+            if not re.match(r'https?:\/\/[a-zA-Z0-9-.]*{}'.format(self.domain), link) and not re.match(r'.*\.js$', link):  # ilegal domain
                 continue
             if re.match(r'[@#]', link) or re.match(r'javascript:', link, re.I):  # @# | javascript:
                 continue
@@ -239,7 +238,6 @@ class L1nker:
 
     def start(self):
         self.analyze_url()
-        self.analyze_domain()
         self.config()
         self.build_threading()
         self.build_session()
@@ -263,21 +261,22 @@ if args.help:
     ap.print_help()
     sys.exit(0)
 
-url   = args.url
-timeout = args.timeout
-output_file = args.output
-threads = args.threads
-oos = args.out_of_scope.replace(' ', '').split(',') if args.out_of_scope else []
-ins = args.in_scope.replace(' ', '').split(',') if args.in_scope else []
+url          = args.url
+timeout      = args.timeout
+output_file  = args.output
+threads      = args.threads
+oos          = args.out_of_scope.replace(' ', '').split(',') if args.out_of_scope else []
+ins          = args.in_scope.replace(' ', '').split(',') if args.in_scope else []
 print(f"[!] Out of Scope: {', '.join(oos)}") if oos else print(end='')
 print(f"[!] In Scope:     {', '.join(ins)}") if ins else print(end='')
-proxy_ip   = re.match(r'https?:\/\/(?P<ip>[0-9.]*):', args.proxy).group('ip') if args.proxy else ''
-proxy_port = re.match(r'https?:\/\/[a-zA-Z0-9-.]*:(?P<port>\d+)\/?', args.proxy).group('port') if args.proxy else ''
-proxy_type = 'HTTP'
-proxies = {'http': args.proxy, 'https': args.proxy}
+proxy_ip     = re.match(r'https?:\/\/(?P<ip>[0-9.]*):', args.proxy).group('ip') if args.proxy else ''
+proxy_port   = re.match(r'https?:\/\/[a-zA-Z0-9-.]*:(?P<port>\d+)\/?', args.proxy).group('port') if args.proxy else ''
+proxy_type   = 'HTTP'
+proxies      = {'http': args.proxy, 'https': args.proxy}
 fake_headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.147 Safari/537.36',
-    'Referer': 'https://google.com.jp'}
-debug = args.debug
+    'Referer': 'https://google.com.jp'
+}
+debug        = args.debug
 
 L1nker(url, headers=args.headers, cookies=args.cookies).start()
